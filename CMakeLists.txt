@@ -17,7 +17,7 @@ add_executable(fatd main.c)
 target_link_libraries(fatd PUBLIC FatDriver)
 target_include_directories(fatd PUBLIC
                           "${PROJECT_BINARY_DIR}"
-                          "${PROJECT_SOURCE_DIR}/fat_driver"
+                          "${PROJECT_SOURCE_DIR}/converter/fat_driver"
                           )
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
