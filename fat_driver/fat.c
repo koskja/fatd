@@ -106,7 +106,7 @@ void fat_test(struct fat_device *self)
 	struct file_entry e;
 	uint64_t entry = cluster_first_entry(self, root_dir_cluster(self));
 	size_t c = 0;
-	while (!next_entry(self, &entry, &e) && entry && ++c) {
+	while (!next_entry_raw(self, &entry, &e) && entry && ++c) {
 		printf("%.11s ", e.filename);
 		if(c % 10 == 0)
 			printf("\n");

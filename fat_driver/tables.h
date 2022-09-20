@@ -3,6 +3,31 @@
 
 #include "fat.h"
 
+struct fat_ext16 {
+	uint8_t bios_drive_num;
+	uint8_t reserved1;
+	uint8_t boot_signature;
+	uint32_t volume_id;
+	uint8_t volume_label[11];
+	uint8_t fat_type_label[8];
+} __attribute__((packed));
+
+struct fat_ext32 {
+	uint32_t table_size_32;
+	uint16_t extended_flags;
+	uint16_t fat_version;
+	uint32_t root_cluster;
+	uint16_t fat_info;
+	uint16_t backup_BS_sector;
+	uint8_t reserved_0[12];
+	uint8_t drive_number;
+	uint8_t reserved_1;
+	uint8_t boot_signature;
+	uint32_t volume_id;
+	uint8_t volume_label[11];
+	uint8_t fat_type_label[8];
+} __attribute__((packed));
+
 // A FAT partition consists of the following parts:
 // Sector 0: BIOS Parameter Block (BPB)
 
@@ -34,32 +59,11 @@ struct fat_table {
 	uint32_t hidden_sector_count;
 	uint32_t total_sectors_32;
 
-	uint8_t extended_section[54];
-} __attribute__((packed));
-
-struct fat_ext16 {
-	uint8_t bios_drive_num;
-	uint8_t reserved1;
-	uint8_t boot_signature;
-	uint32_t volume_id;
-	uint8_t volume_label[11];
-	uint8_t fat_type_label[8];
-} __attribute__((packed));
-
-struct fat_ext32 {
-	uint32_t table_size_32;
-	uint16_t extended_flags;
-	uint16_t fat_version;
-	uint32_t root_cluster;
-	uint16_t fat_info;
-	uint16_t backup_BS_sector;
-	uint8_t reserved_0[12];
-	uint8_t drive_number;
-	uint8_t reserved_1;
-	uint8_t boot_signature;
-	uint32_t volume_id;
-	uint8_t volume_label[11];
-	uint8_t fat_type_label[8];
+	union {
+		uint8_t extended_section[54];
+		struct fat_ext16 ext_16;
+		struct fat_ext32 ext_32;
+	};
 } __attribute__((packed));
 
 struct fat_device {
