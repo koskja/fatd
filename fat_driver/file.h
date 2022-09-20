@@ -28,3 +28,10 @@ struct lfn_entry {
 
 uint64_t next_entry(struct fat_device *self, uint64_t *entry, struct file_entry *out);
 uint64_t cluster_first_entry(struct fat_device *self, uint64_t cluster);
+
+#define READ_ONLY 0x01
+#define HIDDEN    0x02
+#define SYSTEM    0x04
+#define VOLUME_ID 0x08
+#define DIRECTORY 0x10
+#define ARCHIVE   0x20
