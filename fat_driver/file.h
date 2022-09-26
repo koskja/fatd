@@ -34,8 +34,9 @@ struct entry_union {
 	};
 };
 
-struct full_file {
+struct entry_node {
 	struct file_entry entry;
+	uint8_t attr;
 	char name[1665];
 };
 
@@ -47,8 +48,12 @@ uint64_t cluster_first_entry(struct fat_device *self,
 							 uint64_t cluster);
 uint64_t read_next_entry(struct fat_device *self, uint64_t *entry,
 						 struct entry_union *out);
-uint64_t next_file(struct fat_device *self, uint64_t *entry,
-				   struct full_file *out);
+uint64_t next_node(struct fat_device *self, uint64_t *entry,
+				   struct entry_node *out);
+uint64_t dir_entries(struct fat_device *self,
+					 struct entry_node *node);
+uint64_t find_file(struct fat_device *self, struct entry_node *node,
+				   const char *filename);
 
 #define READ_ONLY 0x01
 #define HIDDEN 0x02

@@ -95,6 +95,32 @@ uint64_t read_data_cluster(struct fat_device *self, uint32_t cluster)
 					self->table.sectors_per_cluster);
 }
 
+uint64_t fat_treewalk(struct fat_device *self, uint64_t entry,
+					  char **prefix)
+{
+	struct entry_node e;
+	char **_p = prefix;
+	do {
+		PROPAGATE_ERRNO(next_node(self, &entry, &e));
+		prefix = _p;
+		do {
+			printf("%s/", *prefix);
+		} while (*(++prefix));
+		printf("%s\n", e.name);
+		if (e.attr & DIRECTORY &&
+			(strcmp(e.name, ".") != 0 && strcmp(e.name, "..") != 0)) {
+			*prefix = malloc(strlen(e.name));
+			strcpy(*prefix, e.name);
+			PROPAGATE_ERRNO(
+				fat_treewalk(self, dir_entries(self, &e), _p));
+			free(*prefix);
+			*prefix = 0;
+		}
+		prefix = _p;
+	} while (entry);
+	return 0;
+}
+
 void fat_test(struct fat_device *self)
 {
 	printf("Root directory clusters: [ ");
@@ -103,15 +129,16 @@ void fat_test(struct fat_device *self)
 		printf("%u ", cluster);
 	} while (!next_cluster(self, &cluster) && cluster);
 	printf("]\n");
-	struct file_entry e;
-	uint64_t entry = cluster_first_entry(self, root_dir_cluster(self));
+	uint64_t entry =
+		cluster_first_entry(self, root_dir_cluster(self));
 	size_t c = 0;
-	struct full_file f;
-	while (!next_file(self, &entry, &f) && entry && ++c) {
+	char **buf = calloc(8192, 1);
+	fat_treewalk(self, entry, buf);
+	/*while (!next_node(self, &entry, &f) && entry && ++c) {
 		printf("%s ", f.name);
 		if(c % 10 == 0)
 			printf("\n");
-	}
+	}*/
 }
 
 uint32_t root_dir_cluster(struct fat_device *self)
@@ -122,10 +149,11 @@ uint32_t root_dir_cluster(struct fat_device *self)
 		return root_dir_start_sector(&self->table) /
 			   self->table.sectors_per_cluster;
 
-	case FAT32:
-	{
-		struct fat_ext32 *ext = ((struct fat_ext32 *)(&((self->table).extended_section)));
-		return ext->root_cluster;}
+	case FAT32: {
+		struct fat_ext32 *ext =
+			((struct fat_ext32 *)(&((self->table).extended_section)));
+		return ext->root_cluster;
+	}
 
 	case FATEX:
 	default:
@@ -155,7 +183,7 @@ uint32_t fat_start(struct fat_table *self)
 uint32_t fat_table_size(struct fat_table *self)
 {
 	uint32_t type = get_fat_type(self);
-	if(type == FAT32)
+	if (type == FAT32)
 		return EXT_FAT32((*self))->table_size_32;
 	else
 		return self->table_size;

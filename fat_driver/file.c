@@ -116,8 +116,8 @@ int convert_83(struct file_entry *self, utf8_t *out, size_t size,
 	return out - start + 1;
 }
 
-uint64_t next_file(struct fat_device *self, uint64_t *entry,
-				   struct full_file *out)
+uint64_t next_node(struct fat_device *self, uint64_t *entry,
+				   struct entry_node *out)
 {
 	struct entry_union eu;
 	struct lfn_entry buf[64];
@@ -138,6 +138,7 @@ uint64_t next_file(struct fat_device *self, uint64_t *entry,
 
 	buf_end = buf_ptr;
 	out->entry = last;
+	out->attr = out->entry.attributes;
 
 	if (buf_ptr == buf) {
 		out_ptr += convert_83(&last, (utf8_t *)&out->name[0],
@@ -152,4 +153,16 @@ uint64_t next_file(struct fat_device *self, uint64_t *entry,
 
 	*out_ptr = 0x00;
 	return 0;
+}
+
+uint32_t file_cluster(struct file_entry *self)
+{
+	return (uint32_t)self->entry_hi << 16 | (uint32_t)self->entry_lo;
+}
+
+uint64_t dir_entries(struct fat_device *self, struct entry_node *node)
+{
+	if (!(node->attr & DIRECTORY))
+		return 0;
+	return cluster_first_entry(self, file_cluster(&node->entry));
 }
