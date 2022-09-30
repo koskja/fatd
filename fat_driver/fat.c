@@ -1,4 +1,5 @@
 #include "internal.h"
+#include "cache.h"
 #include <memory.h>
 #include <endian.h>
 #include <stdio.h>
