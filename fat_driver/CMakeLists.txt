@@ -5,7 +5,7 @@ include(CTest)
 enable_testing()
 
 cmake_policy(SET CMP0063 NEW)
-add_library(FatDriver SHARED fat.c file.c)
+add_library(FatDriver SHARED fat.c file.c cache.c)
 set_target_properties(FatDriver PROPERTIES C_VISIBILITY_PRESET hidden)
 
 add_subdirectory(utf8-utf16-converter)
