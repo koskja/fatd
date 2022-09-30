@@ -21,6 +21,6 @@
 uint64_t next_cluster_raw(struct fat_device *self, uint32_t *cluster);
 uint64_t next_cluster(struct fat_device *self, uint32_t *cluster);
 
-uint64_t read_data_cluster(struct fat_device *self, uint32_t cluster);
+uint64_t read_data_cluster(struct fat_device *self, uint32_t cluster, char **cluster_buf);
 
 #endif

@@ -8,8 +8,9 @@ uint64_t next_entry_raw(struct fat_device *self, uint64_t *entry,
 							 self->table.bytes_per_sector;
 	uint64_t cluster = *entry * 32 / cluster_bytes;
 	uint64_t cluster_entry_offset = *entry * 32 % cluster_bytes;
-	PROPAGATE_ERRNO(read_data_cluster(self, cluster));
-	memcpy(out, self->blk_buf + cluster_entry_offset,
+	char *cluster_buf;
+	PROPAGATE_ERRNO(read_data_cluster(self, cluster, &cluster_buf));
+	memcpy(out, cluster_buf + cluster_entry_offset,
 		   sizeof(struct file_entry));
 	cluster_entry_offset += 32;
 	if (cluster_entry_offset == cluster_bytes) {

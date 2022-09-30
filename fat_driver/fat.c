@@ -4,6 +4,8 @@
 #include <endian.h>
 #include <stdio.h>
 
+#define CACHE_ENTRIES 1024*1024
+
 uint8_t get_fat_type(struct fat_table *self);
 uint32_t root_dir_start_sector(struct fat_table *self);
 uint32_t root_dir_cluster(struct fat_device *self);
@@ -15,30 +17,22 @@ uint64_t fat_init(struct fat_device **self_dptr,
 	struct fat_device *self;
 
 	// Allocate self and io buffer
-	if (!MALLOC_ASSIGN(*self_dptr) ||
-		!MALLOC_ASSIGN_SIZE((*self_dptr)->fat_buf, blk_size(dev))) {
-		fat_dispose(*self_dptr);
-		return -ENOMEM;
+	if (!MALLOC_ASSIGN(*self_dptr)) {
+		return ENOMEM;
 	}
 	self = *self_dptr;
 
-	self->device = dev;
+	PROPAGATE_ERRNO(cache_init(&self->cache, dev, CACHE_ENTRIES));
 
+	char *bpb_buf;
 	// Load BPB
-	PROPAGATE_ERRNO(blk_read(dev, self->fat_buf, 0, 1));
+	PROPAGATE_ERRNO(cache_get(&self->cache, 0, 1, &bpb_buf));
 
-	memcpy(&self->table, self->fat_buf, sizeof(struct fat_table));
+	memcpy(&self->table, bpb_buf, sizeof(struct fat_table));
 
 	self->fat_type = get_fat_type(&self->table);
 	if (self->fat_type == FATEX)
-		return -ENOTSUP;
-
-	if (!MALLOC_ASSIGN_SIZE(self->blk_buf,
-							blk_size(dev) *
-								self->table.sectors_per_cluster)) {
-		fat_dispose(self);
-		return -ENOMEM;
-	}
+		return ENOTSUP;
 
 	return 0;
 }
@@ -63,10 +57,11 @@ uint64_t next_cluster_raw(struct fat_device *self, uint32_t *cluster)
 		fat_start_sector;
 	uint32_t sector_offset =
 		offset_bytes % self->table.bytes_per_sector;
-	blk_read(self->device, self->fat_buf, target_sector, 1);
+	char *fat_sector;
+	PROPAGATE_ERRNO(cache_get(&self->cache, target_sector, 1, &fat_sector));
 
 	uint32_t raw_next = 0;
-	memcpy(&raw_next, &self->fat_buf[sector_offset], entry_width);
+	memcpy(&raw_next, fat_sector + sector_offset, entry_width);
 	*cluster = le32toh(raw_next);
 	return 0;
 }
@@ -88,12 +83,12 @@ uint64_t next_cluster(struct fat_device *self, uint32_t *cluster)
 	return 0;
 }
 
-uint64_t read_data_cluster(struct fat_device *self, uint32_t cluster)
+uint64_t read_data_cluster(struct fat_device *self, uint32_t cluster, char **cluster_buf)
 {
-	return blk_read(self->device, self->blk_buf,
+	return cache_get(&self->cache, 
 					(cluster - 2) * self->table.sectors_per_cluster +
 						first_data_sector(&self->table),
-					self->table.sectors_per_cluster);
+					self->table.sectors_per_cluster, cluster_buf);
 }
 
 uint64_t fat_treewalk(struct fat_device *self, uint64_t entry,
@@ -226,8 +221,7 @@ uint8_t get_fat_type(struct fat_table *self)
 void fat_dispose(struct fat_device *self)
 {
 	if (self) {
-		free(self->blk_buf);
-		free(self->fat_buf);
+		cache_dispose(&self->cache);
 	}
 	free(self);
 }

@@ -2,6 +2,7 @@
 #define FAT_TABLES_H
 
 #include "fat.h"
+#include "cache.h"
 
 struct fat_ext16 {
 	uint8_t bios_drive_num;
@@ -68,10 +69,8 @@ struct fat_table {
 
 struct fat_device {
 	struct fat_table table; // stored main table
-	struct blk_device *device; // handle to the underlying device
+	struct blk_cache cache; 
 	uint8_t fat_type; // FAT12, FAT16, ...
-	char *blk_buf; // buffer for clusters
-	char *fat_buf; // buffer for FAT entries
 };
 
 uint8_t get_fat_type(struct fat_table *self);

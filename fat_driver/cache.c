@@ -119,6 +119,7 @@ uint64_t cache_get(struct blk_cache *self, uint64_t blk,
 			PROPAGATE_ERRNO(cache_evict_lru(self));
 		}
 		PROPAGATE_ERRNO(cache_insert(self, blk, count, buf));
+        PROPAGATE_ERRNO(blk_read(self->dev, buf, blk, count));
 		*ptr = buf;
 	} else {
 		if (e->count < count) {
@@ -146,7 +147,7 @@ uint64_t cache_dispose(struct blk_cache *self)
 	if (!self)
 		return 0;
 	PROPAGATE_ERRNO(cache_flush(self));
+    blk_dispose(self->dev);
 	free(self->entries);
-	free(self);
 	return 0;
 }
