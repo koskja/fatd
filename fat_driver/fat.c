@@ -4,7 +4,7 @@
 #include <endian.h>
 #include <stdio.h>
 
-#define CACHE_ENTRIES 1024*1024
+#define CACHE_ENTRIES 1024 * 1024
 
 uint8_t get_fat_type(struct fat_table *self);
 uint32_t root_dir_start_sector(struct fat_table *self);
@@ -58,7 +58,8 @@ uint64_t next_cluster_raw(struct fat_device *self, uint32_t *cluster)
 	uint32_t sector_offset =
 		offset_bytes % self->table.bytes_per_sector;
 	char *fat_sector;
-	PROPAGATE_ERRNO(cache_get(&self->cache, target_sector, 1, &fat_sector));
+	PROPAGATE_ERRNO(
+		cache_get(&self->cache, target_sector, 1, &fat_sector));
 
 	uint32_t raw_next = 0;
 	memcpy(&raw_next, fat_sector + sector_offset, entry_width);
@@ -82,27 +83,38 @@ uint64_t next_cluster(struct fat_device *self, uint32_t *cluster)
 		*cluster = raw;
 	return 0;
 }
-
-uint64_t read_data_cluster(struct fat_device *self, uint32_t cluster, char **cluster_buf)
+uint64_t set_next_cluster(struct fat_device *self, uint32_t cluster,
+						  uint32_t next)
 {
-	return cache_get(&self->cache, 
-					(cluster - 2) * self->table.sectors_per_cluster +
-						first_data_sector(&self->table),
-					self->table.sectors_per_cluster, cluster_buf);
+	// TODO
+	return 0;
+}
+
+uint64_t read_data_cluster(struct fat_device *self, uint32_t cluster,
+						   char **cluster_buf)
+{
+	return cache_get(&self->cache,
+					 (cluster - 2) * self->table.sectors_per_cluster +
+						 first_data_sector(&self->table),
+					 self->table.sectors_per_cluster, cluster_buf);
 }
 
 uint64_t fat_treewalk(struct fat_device *self, uint64_t entry,
 					  char **prefix)
 {
+	uint64_t start = entry;
 	struct entry_node e;
 	char **_p = prefix;
 	do {
 		PROPAGATE_ERRNO(next_node(self, &entry, &e));
+		if(!entry)
+			return 0;
+		PROPAGATE_ERRNO(delete_file(self, entry, e._last));
 		prefix = _p;
 		do {
 			printf("%s/", *prefix);
 		} while (*(++prefix));
-		printf("%s\n", e.name);
+		printf("%s @ %u\n", e.name, e._last);
 		if (e.attr & DIRECTORY &&
 			(strcmp(e.name, ".") != 0 && strcmp(e.name, "..") != 0)) {
 			*prefix = malloc(strlen(e.name));
@@ -112,12 +124,13 @@ uint64_t fat_treewalk(struct fat_device *self, uint64_t entry,
 			free(*prefix);
 			*prefix = 0;
 		}
+		PROPAGATE_ERRNO(delete_file(self, start, e._last));
 		prefix = _p;
-	} while (entry);
+	} while (1);
 	return 0;
 }
 
-void fat_test(struct fat_device *self)
+uint64_t fat_test(struct fat_device *self)
 {
 	printf("Root directory clusters: [ ");
 	uint32_t cluster = root_dir_cluster(self);
@@ -129,12 +142,16 @@ void fat_test(struct fat_device *self)
 		cluster_first_entry(self, root_dir_cluster(self));
 	size_t c = 0;
 	char **buf = calloc(8192, 1);
-	fat_treewalk(self, entry, buf);
+	PROPAGATE_ERRNO(fat_treewalk(self, entry, buf));
+	/*PROPAGATE_ERRNO(cache_flush(&self->cache));
+	while (!cache_evict_lru(&self->cache))
+		;*/
 	/*while (!next_node(self, &entry, &f) && entry && ++c) {
 		printf("%s ", f.name);
 		if(c % 10 == 0)
 			printf("\n");
 	}*/
+	return 0;
 }
 
 uint32_t root_dir_cluster(struct fat_device *self)
@@ -224,4 +241,29 @@ void fat_dispose(struct fat_device *self)
 		cache_dispose(&self->cache);
 	}
 	free(self);
+}
+
+uint64_t alloc_cluster(struct fat_device *self, uint32_t prev,
+					   uint32_t next, uint32_t *out)
+{
+	uint64_t iter = search_start_hint(self) - 1;
+	uint64_t c = 0;
+	char *buf;
+	do {
+		c = ++iter;
+		PROPAGATE_ERRNO(next_cluster(self, &c));
+	} while (c != 0); // find unused cluster
+	if (prev)
+		PROPAGATE_ERRNO(set_next_cluster(self, prev, iter));
+	if (next)
+		PROPAGATE_ERRNO(set_next_cluster(self, iter, next));
+	else
+		PROPAGATE_ERRNO(set_next_cluster(self, iter, 0xFFFFFFF8));
+	if (out)
+		*out = iter;
+	return 0;
+}
+uint64_t search_start_hint(struct fat_device *self)
+{
+	return 0;
 }

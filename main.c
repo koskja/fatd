@@ -15,12 +15,13 @@ int main_(char *blk_dev_path)
 	struct blk_device *bd = malloc(sizeof(*bd));
 	if (!bd)
 		return 1;
-	bd->f = fopen(blk_dev_path, "r+");
+	bd->f = fopen(blk_dev_path, "rw+");
 	if (!bd->f)
 		return errno;
 	PROPAGATE_ERRNO(fat_init(&fd, bd));
 	printf("Initialized\n");
-	fat_test(fd);
+	PROPAGATE_ERRNO(fat_test(fd));
+	PROPAGATE_ERRNO(fat_test(fd));
 	fat_dispose(fd);
 	return 0;
 }
@@ -36,6 +37,13 @@ uint64_t blk_read(struct blk_device *dev, char *dst, uint64_t blk,
 		else
 			return errno;
 	}
+	printf("Read from block %d\n", blk);
+	/*for(char *i = dst; i < dst+count*blk_size(dev); ++i) {
+		printf("%c ", (uint8_t)(*i));
+		if((i - dst) % 64 == 0)
+			printf("\n");
+	}
+	printf("\n\n");*/
 	return 0;
 }
 
@@ -51,6 +59,13 @@ uint64_t blk_write(struct blk_device *dev, uint64_t blk, char *src,
 		else
 			return errno;
 	}
+	printf("Write to block %d\n", blk);
+	/*for(char *i = src; i < src+count*blk_size(dev); ++i) {
+		printf("%c ", (uint8_t)(*i));
+		if((i - src) % 64 == 0)
+			printf("\n");
+	}
+	printf("\n\n");*/
 	return 0;
 }
 
@@ -69,6 +84,8 @@ void blk_dispose(struct blk_device *self)
 
 int main(void)
 {
-	uint32_t x = main_("/dev/loop0");
-	return x;
+	uint32_t e = main_("./tmpfs/floppy.img");
+	if(e)
+		printf("error %u \n", (unsigned int)e);
+	return 49;
 }

@@ -20,7 +20,12 @@
 
 uint64_t next_cluster_raw(struct fat_device *self, uint32_t *cluster);
 uint64_t next_cluster(struct fat_device *self, uint32_t *cluster);
+uint64_t set_next_cluster(struct fat_device *self, uint32_t cluster, uint32_t next);
 
 uint64_t read_data_cluster(struct fat_device *self, uint32_t cluster, char **cluster_buf);
+uint64_t alloc_cluster(struct fat_device *self, uint32_t prev,
+					   uint32_t next, uint32_t *out);
+
+uint64_t search_start_hint(struct fat_device *self);
 
 #endif

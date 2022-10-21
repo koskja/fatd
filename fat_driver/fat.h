@@ -18,7 +18,7 @@ void blk_dispose(struct blk_device *dev) __ATTR_PUBLIC;
 
 uint64_t fat_init(struct fat_device **self,
 				  struct blk_device *dev) __ATTR_PUBLIC;
-void fat_test(struct fat_device *self) __ATTR_PUBLIC;
+uint64_t fat_test(struct fat_device *self) __ATTR_PUBLIC;
 void fat_dispose(struct fat_device *self) __ATTR_PUBLIC;
 
 #undef __ATTR_PUBLIC

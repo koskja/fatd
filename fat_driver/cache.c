@@ -103,7 +103,8 @@ end:
 
 void cache_mark(struct blk_cache *self, uint64_t blk)
 {
-	self->entries[blk % self->entry_count].dirty = 1;
+	struct entry *x = &self->entries[blk % self->entry_count];
+	x->dirty = 1;
 	return;
 }
 

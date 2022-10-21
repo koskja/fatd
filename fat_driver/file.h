@@ -36,6 +36,11 @@ struct entry_union {
 
 struct entry_node {
 	struct file_entry entry;
+	uint64_t _first_total;
+	uint64_t _first_lfn;
+	uint64_t _last;
+	uint64_t _total_len;
+	uint64_t _used_len;
 	uint8_t attr;
 	char name[1665];
 };
@@ -50,10 +55,30 @@ uint64_t read_next_entry(struct fat_device *self, uint64_t *entry,
 						 struct entry_union *out);
 uint64_t next_node(struct fat_device *self, uint64_t *entry,
 				   struct entry_node *out);
+uint64_t advance_entry(struct fat_device *self, uint64_t *entry,
+					  int64_t n);
 uint64_t dir_entries(struct fat_device *self,
 					 struct entry_node *node);
 uint64_t find_file(struct fat_device *self, struct entry_node *node,
-				   const char *filename);
+				   const char *filename); // TODO
+void destruct_entry(struct fat_device *self, uint64_t entry,
+					uint64_t *cluster, uint64_t *offset);
+uint64_t entry_mut(struct fat_device *self, uint64_t entry,
+				   struct file_entry **out);
+uint64_t find_file_start(struct fat_device *self, uint64_t dir_start,
+						 uint64_t entry, uint64_t *first_entry,
+						 uint64_t *first_used);
+
+uint64_t delete_file(struct fat_device *self, uint64_t dir_start,
+					 uint64_t entry);
+
+uint64_t entry_diff(struct fat_device *self, uint64_t a, uint64_t b,
+					uint64_t *diff);
+uint64_t first_matching(struct fat_device *self, uint64_t dir_start,
+						uint64_t len, uint64_t *ofe);
+
+uint64_t create_file(struct fat_device *self, uint64_t dir_start,
+					 char *name, uint8_t flags);
 
 #define READ_ONLY 0x01
 #define HIDDEN 0x02
